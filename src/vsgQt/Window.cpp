@@ -224,12 +224,11 @@ void Window::resizeEvent(QResizeEvent* /*e*/)
 {
     if (!windowAdapter) return;
 
-    vsg::clock::time_point event_time = vsg::clock::now();
-    windowAdapter->bufferedEvents.push_back(vsg::ConfigureWindowEvent::create(windowAdapter, event_time, convert_coord(x()), convert_coord(y()), convert_coord(width()), convert_coord(height())));
+    // If the window is minimized or collapsed, don't tell VSG to resize yet
+    if (width() <= 0 || height() <= 0)
+      return;
 
-    windowAdapter->resize();
-
-    if (viewer) viewer->request();
+    viewer->requests++;
 }
 
 void Window::keyPressEvent(QKeyEvent* e)
