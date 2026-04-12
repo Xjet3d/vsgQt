@@ -60,25 +60,33 @@ void Viewer::request()
 
 void Viewer::render(double simulationTime)
 {
-    if (!continuousUpdate && requests.load() == 0)
+    // If no update is requested and no external request, 
+    // we still might need to repair if the OS demands it.
+    bool needsRepair = (requests.load() > 0); 
+
+    if (!continuousUpdate && !needsRepair)
     {
-        //vsg::info("render() no render : requests = ", requests.load());
         return;
     }
 
+    // Logic: If focused/active, do a full cycle. 
+    // If just repairing, skip the heavy 'update' and 'handleEvents'.
     if (advanceToNextFrame(simulationTime))
     {
-        handleEvents();
-        update();
+        if (continuousUpdate) 
+        {
+            handleEvents();
+            update();
+        }
+        
+        // Always record and present if we got this far
+        // This 'repairs' the window with the last known scene state
         recordAndSubmit();
         present();
     }
-    else
+    else if (status->cancel())
     {
-        if (status->cancel())
-        {
-            QCoreApplication::quit();
-        }
+        QCoreApplication::quit();
     }
 
     requests = 0;
