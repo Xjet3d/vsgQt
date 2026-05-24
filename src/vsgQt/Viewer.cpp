@@ -53,6 +53,18 @@ bool Viewer::pollEvents(bool discardPreviousEvents)
     return !_events.empty();
 }
 
+bool Viewer::windowsReady() const
+{
+    for (auto& window : _windows)
+    {
+        if (window->numFrames() == 0)
+        {
+            return false;
+        }
+    }
+    return !_windows.empty();
+}
+
 void Viewer::request()
 {
     ++requests;
@@ -93,8 +105,18 @@ void Viewer::render(double simulationTime)
     }
     catch (const vsg::Exception& e)
     {
-        vsg::warn("Viewer::render() caught exception: ", e.message);
-        // Request a retry on next frame - swap chain may recover after window is resized/restored
+        vsg::warn("Viewer::render() caught vsg::Exception: ", e.message, " result=", e.result);
+
+        // Resource exhaustion errors are fatal - re-throw to let caller handle
+        if (e.result == VK_ERROR_OUT_OF_DEVICE_MEMORY || 
+            e.result == VK_ERROR_OUT_OF_HOST_MEMORY)
+        {
+            vsg::warn("Viewer::render() re-throwing fatal resource exhaustion error");
+            throw; // Propagate to enableSafeRender() which will call handleFailure()
+        }
+
+        // Other errors might be recoverable (e.g., window resize) - request retry
+        vsg::warn("Viewer::render() requesting retry for recoverable error");
         requests = 1;
         return;
     }

@@ -49,6 +49,9 @@ namespace vsgQt
 
         /// set the QTimer interval in milliseconds, this controls how often the Viewer::render() is called
         void setInterval(int msecTimerInterval);
+
+        /// Check if all windows have valid frames built
+        bool windowsReady() const;
     };
 
 } // namespace vsgQt
