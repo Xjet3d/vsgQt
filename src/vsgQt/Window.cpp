@@ -160,8 +160,24 @@ void Window::initializeWindow()
     traits->width = convert_coord(width());
     traits->height = convert_coord(height());
 
-    windowAdapter = vsg::Window::create(traits);
-    _initialized = true;
+    // Validate window dimensions before attempting swap chain creation
+    if (traits->width <= 0 || traits->height <= 0)
+    {
+        vsg::warn("Window::initializeWindow() - invalid window dimensions (", traits->width, "x", traits->height, "), deferring initialization");
+        return;
+    }
+
+    try
+    {
+        windowAdapter = vsg::Window::create(traits);
+        _initialized = true;
+    }
+    catch (const vsg::Exception& e)
+    {
+        vsg::warn("Window::initializeWindow() failed: ", e.message);
+        // Don't set _initialized, allowing retry on next expose event
+        windowAdapter = {};
+    }
 }
 
 void Window::cleanup()

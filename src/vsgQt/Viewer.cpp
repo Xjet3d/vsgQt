@@ -69,24 +69,34 @@ void Viewer::render(double simulationTime)
         return;
     }
 
-    // Logic: If focused/active, do a full cycle. 
-    // If just repairing, skip the heavy 'update' and 'handleEvents'.
-    if (advanceToNextFrame(simulationTime))
+    try
     {
-        if (continuousUpdate) 
+        // Logic: If focused/active, do a full cycle. 
+        // If just repairing, skip the heavy 'update' and 'handleEvents'.
+        if (advanceToNextFrame(simulationTime))
         {
-            handleEvents();
-            update();
+            if (continuousUpdate) 
+            {
+                handleEvents();
+                update();
+            }
+
+            // Always record and present if we got this far
+            // This 'repairs' the window with the last known scene state
+            recordAndSubmit();
+            present();
         }
-        
-        // Always record and present if we got this far
-        // This 'repairs' the window with the last known scene state
-        recordAndSubmit();
-        present();
+        else if (status->cancel())
+        {
+            QCoreApplication::quit();
+        }
     }
-    else if (status->cancel())
+    catch (const vsg::Exception& e)
     {
-        QCoreApplication::quit();
+        vsg::warn("Viewer::render() caught exception: ", e.message);
+        // Request a retry on next frame - swap chain may recover after window is resized/restored
+        requests = 1;
+        return;
     }
 
     requests = 0;
